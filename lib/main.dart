@@ -40,11 +40,9 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-
   @override
   Widget build(BuildContext context) {
     return Consumer<MemoService>(builder: (context, memoService, child) {
-
       List<Memo> memoList = memoService.memoList;
 
       return Scaffold(
@@ -60,9 +58,13 @@ class _HomePageState extends State<HomePage> {
                   return ListTile(
                     // 메모 고정 아이콘
                     leading: IconButton(
-                      icon: Icon(CupertinoIcons.pin),
+                      icon: Icon(
+                        memo.isPinned
+                            ? CupertinoIcons.pin_fill
+                            : CupertinoIcons.pin,
+                      ),
                       onPressed: () {
-                        print('$memo : pin 클릭 됨');
+                        memoService.updatePinMemo(index: index);
                       },
                     ),
                     // 메모 내용 (최대 3줄까지만 보여주도록)
@@ -71,8 +73,11 @@ class _HomePageState extends State<HomePage> {
                       maxLines: 3,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    onTap: () {
-                      Navigator.push(
+                    trailing: Text(
+                      memo.updateTime == null ? '' : memo.updateTime.toString().substring(0,16),
+                    ),
+                    onTap: ()   async{
+                      await Navigator.push(
                         context,
                         MaterialPageRoute(
                           builder: (_) => DetailPage(
@@ -80,15 +85,18 @@ class _HomePageState extends State<HomePage> {
                           ),
                         ),
                       );
+                      if(memo.content.isEmpty){
+                        memoService.deleteMemo(index: index);
+                      }
                     },
                   );
                 },
               ),
         floatingActionButton: FloatingActionButton(
           child: Icon(Icons.add),
-          onPressed: () {
+          onPressed: () async {
             memoService.createMemo(content: '');
-            Navigator.push(
+            await Navigator.push(
               context,
               MaterialPageRoute(
                 builder: (_) => DetailPage(
@@ -96,6 +104,10 @@ class _HomePageState extends State<HomePage> {
                 ),
               ),
             );
+            if(memoList.last.content.isEmpty){
+              memoService.deleteMemo(index: memoList.length -1);
+            }
+
           },
         ),
       );
@@ -105,7 +117,7 @@ class _HomePageState extends State<HomePage> {
 
 // 메모 생성 및 수정 페이지
 class DetailPage extends StatelessWidget {
-  DetailPage({super.key,required this.index});
+  DetailPage({super.key, required this.index});
 
   final int index;
 
@@ -152,35 +164,36 @@ class DetailPage extends StatelessWidget {
     );
   }
 
-  Future<dynamic> showDeleteDialogue(BuildContext context, MemoService memoService) {
+  Future<dynamic> showDeleteDialogue(
+      BuildContext context, MemoService memoService) {
     return showDialog(
-              context: context,
-              builder: (context) {
-                return AlertDialog(
-                  title: Text("정말로 삭제하시겠습니까?"),
-                  actions: [
-                    // 취소 버튼
-                    TextButton(
-                      onPressed: () {
-                        Navigator.pop(context);
-                      },
-                      child: Text("취소"),
-                    ),
-                    // 확인 버튼
-                    TextButton(
-                      onPressed: () {
-                        memoService.deleteMemo(index: index);
-                        Navigator.pop(context); // 팝업 닫기
-                        Navigator.pop(context);
-                      },
-                      child: Text(
-                        "확인",
-                        style: TextStyle(color: Colors.pink),
-                      ),
-                    ),
-                  ],
-                );
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text("정말로 삭제하시겠습니까?"),
+          actions: [
+            // 취소 버튼
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
               },
-            );
+              child: Text("취소"),
+            ),
+            // 확인 버튼
+            TextButton(
+              onPressed: () {
+                memoService.deleteMemo(index: index);
+                Navigator.pop(context); // 팝업 닫기
+                Navigator.pop(context);
+              },
+              child: Text(
+                "확인",
+                style: TextStyle(color: Colors.pink),
+              ),
+            ),
+          ],
+        );
+      },
+    );
   }
 }
